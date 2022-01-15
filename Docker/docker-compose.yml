@@ -2,12 +2,12 @@ version: '3.7'
 
 services:
   ##########################
-  ##    CONSUMING API     ##
+  ##    GOV ADVICE API    ##
   ##########################
-  myconsumer:
+  govadviceapi:
     build: 
       context: ./..
-      dockerfile: Consumer/Dockerfile
+      dockerfile: src/GovernmentAdviceApi/Dockerfile
     ports: 
       - 8887:80
     depends_on:
@@ -18,10 +18,10 @@ services:
   ##########################
   ##  CONSUMING  SIDECAR  ##
   ##########################
-  myconsumer-dapr:
+  govadviceapi-dapr:
     image: daprio/daprd:latest
     command: ["./daprd", 
-      "-app-id", "myconsumer", 
+      "-app-id", "govadviceapi", 
       "-app-port", "80", 
       "-components-path", "/components", 
       "-placement-host-address", "placement:50010",
@@ -29,15 +29,15 @@ services:
     volumes:
         - "./../my-components/:/components" # Mount our components folder for the runtime to use
     depends_on:
-      - myconsumer
-    network_mode: service:myconsumer
+      - govadviceapi
+    network_mode: service:govadviceapi
   ##########################
-  ##    PUBLISHING API    ##
+  ##      NAMES API       ##
   ##########################
-  mypublisher:
+  namesapi:
     build: 
       context: ./..
-      dockerfile: PromiseApi/Dockerfile
+      dockerfile: src/NamesApi/Dockerfile
     ports: 
       - 8888:80
     depends_on:
@@ -49,10 +49,10 @@ services:
   ##########################
   ##  PUBLISHING SIDECAR  ##
   ##########################
-  mypublisher-dapr:
+  namesapi-dapr:
     image: daprio/daprd:latest
     command: ["./daprd", 
-      "-app-id", "mypublisher", 
+      "-app-id", "namesapi", 
       "-app-port", "80", 
       "-components-path", "/components", 
       "-placement-host-address", "placement:50010",
@@ -60,8 +60,8 @@ services:
     volumes:
         - "./../my-components/:/components" # Mount our components folder for the runtime to use
     depends_on:
-      - mypublisher
-    network_mode: service:mypublisher
+      - namesapi
+    network_mode: service:namesapi
   ##########################
   ##      REDIS CACHE     ##
   ##########################
@@ -92,8 +92,83 @@ services:
       - placement
     networks:
       - hello-dapr
+  ##############################
+  ##  RABBIT MQ W/ MANAGEMENT ##
+  ##############################
+  rabbitmq:
+    image: rabbitmq:3-managment
+    ports:
+      - 8089:15672
+    depends_on:
+      - hello-dapr
+  ############################
+  ##       SQL SERVER       ##
+  ############################
+  sqlserver:
+    image: "mcr.microsoft.com/mssql/server"
+    environment:
+      - SA_PASSWORD: "Hell0W0rld!"
+      - ACCEPT_EULA: "Y"
+  ############################
+  ##       EVENT STORE      ##
+  ############################
+  eventstore.db:
+    image: eventstore/eventstore:20.10.2-buster-slim
+    environment:
+      - EVENTSTORE_CLUSTER_SIZE=1
+      - EVENTSTORE_RUN_PROJECTIONS=All
+      - EVENTSTORE_START_STANDARD_PROJECTIONS=true
+      - EVENTSTORE_EXT_TCP_PORT=1113
+      - EVENTSTORE_HTTP_PORT=2113
+      - EVENTSTORE_INSECURE=true
+      - EVENTSTORE_ENABLE_EXTERNAL_TCP=true
+      - EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP=true
+    ports:
+      - "1113:1113"
+      - "2113:2113"
+    volumes:
+      - type: volume
+        source: eventstore-volume-data
+        target: /var/lib/eventstore
+      - type: volume
+        source: eventstore-volume-logs
+        target: /var/log/eventstore
+  ############################
+  ##    ELASTIC SEARCH      ##
+  ############################
+  elasticsearch:
+    container_name: es-container
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+    environment:
+      - xpack.security.enabled=false
+      - "discovery.type=single-node"
+    networks:
+      - hello-dapr
+      - es-net
+    ports:
+      - 9200:9200
+  ############################
+  ##        KIBANA          ##
+  ############################
+  kibana:
+    container_name: kb-container
+    image: docker.elastic.co/kibana/kibana:7.11.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://es-container:9200
+    networks:
+      - hello-dapr
+      - es-net
+    depends_on:
+      - elasticsearch
+    ports:
+      - 5601:5601 
 networks:
   hello-dapr:
+  es-net:
+    driver: bridge
+volumes:
+  eventstore-volume-data:
+  eventstore-volume-logs:
 
 
   

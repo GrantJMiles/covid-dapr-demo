@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
-using extensions;
+using CovidSimulator.Extensions.Data;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
