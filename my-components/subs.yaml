@@ -1,0 +1,9 @@
+apiVersion: dapr.io/v1alpha1
+kind: Subscription
+metadata:
+  name: test-pubsub
+spec:
+  topic: GrantsPromise
+  route: /sub
+  pubsubname: test-pubsub
+  ## SIMPLE APPLICATION WORKS WITH SIMPLE PUB SUB.... TIME TO PLAY!

@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapi
+  labels:
+    app: SecretConsumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: webapi
+  template:
+    metadata:
+      labels:
+        app: SecretConsumer
+        service: webapi
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "secretclient"
+    spec:
+      containers:
+        - name: webapi
+          image: testconsumer:two
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          env:
+            - name: ASPNETCORE_URLS
+              value: http://+:80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapi
+  labels:
+    app: SecretConsumer
+    service: webapi
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8002
+  selector:
+    service: webapi

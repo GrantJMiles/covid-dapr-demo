@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pubapi
+  labels:
+    app: SecretPub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: pubapi
+  template:
+    metadata:
+      labels:
+        app: SecretPub
+        service: pubapi
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "secretpub"
+    spec:
+      containers:
+        - name: pubapi
+          image: testpub:one
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+              protocol: TCP
+          env:
+            - name: ASPNETCORE_URLS
+              value: http://+:80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pubapi
+  labels:
+    app: SecretPub
+    service: pubapi
+spec:
+  ports:
+    - port: 80
+      targetPort: 8001
+      protocol: TCP
+  selector:
+    service: pubapi

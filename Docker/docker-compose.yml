@@ -1,0 +1,99 @@
+version: '3.7'
+
+services:
+  ##########################
+  ##    CONSUMING API     ##
+  ##########################
+  myconsumer:
+    build: 
+      context: ./..
+      dockerfile: Consumer/Dockerfile
+    ports: 
+      - 8887:80
+    depends_on:
+      - mydaprtestredis
+      - placement
+    networks:
+      - hello-dapr
+  ##########################
+  ##  CONSUMING  SIDECAR  ##
+  ##########################
+  myconsumer-dapr:
+    image: daprio/daprd:latest
+    command: ["./daprd", 
+      "-app-id", "myconsumer", 
+      "-app-port", "80", 
+      "-components-path", "/components", 
+      "-placement-host-address", "placement:50010",
+      "--config", "/components/observ.yaml"]
+    volumes:
+        - "./../my-components/:/components" # Mount our components folder for the runtime to use
+    depends_on:
+      - myconsumer
+    network_mode: service:myconsumer
+  ##########################
+  ##    PUBLISHING API    ##
+  ##########################
+  mypublisher:
+    build: 
+      context: ./..
+      dockerfile: PromiseApi/Dockerfile
+    ports: 
+      - 8888:80
+    depends_on:
+      - mydaprtestredis
+      - placement
+    networks:
+      - hello-dapr
+  
+  ##########################
+  ##  PUBLISHING SIDECAR  ##
+  ##########################
+  mypublisher-dapr:
+    image: daprio/daprd:latest
+    command: ["./daprd", 
+      "-app-id", "mypublisher", 
+      "-app-port", "80", 
+      "-components-path", "/components", 
+      "-placement-host-address", "placement:50010",
+      "--config", "/components/observ.yaml"]
+    volumes:
+        - "./../my-components/:/components" # Mount our components folder for the runtime to use
+    depends_on:
+      - mypublisher
+    network_mode: service:mypublisher
+  ##########################
+  ##      REDIS CACHE     ##
+  ##########################
+  mydaprtestredis:
+    image: 'bitnami/redis:latest'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      - hello-dapr
+  ############################
+  ## DAPR PLACEMENT SERVICE ##
+  ############################
+  placement:
+    image: "daprio/dapr"
+    command: ["./placement", "-port", "50006"]
+    ports:
+      - "50010:50006"
+    networks:
+      - hello-dapr
+  ############################
+  ## ZIPKIN OBSERVABILITY   ##
+  ############################
+  zipkinobserv:
+    image: openzipkin/zipkin
+    ports:
+      - 9411:9411
+    depends_on:
+      - placement
+    networks:
+      - hello-dapr
+networks:
+  hello-dapr:
+
+
+  
