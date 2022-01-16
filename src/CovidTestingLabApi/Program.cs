@@ -1,3 +1,8 @@
+using CovidSimulator.Extensions.Data;
+using CovidTestingLabApi;
+using Dapr.Client;
+using Microsoft.Extensions.DependencyInjection;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -8,32 +13,30 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
+var dClient = new DaprClientBuilder().Build();
+var logger = app.Services.GetService<ILogger<Program>>() ?? throw new InvalidOperationException("cannot resolve logger");
 
-app.UseHttpsRedirection();
+var stateStore = app.Configuration.GetValue<string>("Dapr:StateStore");
+var pubsub = app.Configuration.GetValue<string>("Dapr:PubSub");
+logger.LogInformation($"Getting StateStore name: {stateStore}");
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+// REPLACE WITH THE DATETIME SERVICE ONCE UP UP RUNNING
+app.MapPost(ApiEndpoints.SubmitCovidSampleCreate, async (CovidPatient patient) => {
+    var aRequest = new ActionRequest<CovidPatient>(patient.NhsNumber, DateTime.Now, patient);
+    await dClient.SaveStateAsync(stateStore, aRequest.id, aRequest);
+    return Results.Created(ApiEndpoints.SubmitCovidSampleGet, aRequest);
+}).Produces(StatusCodes.Status201Created);
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateTime.Now.AddDays(index),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.MapGet(ApiEndpoints.SubmitCovidSampleGet, async (string nhsNumber) => await dClient.GetStateAsync<ActionRequest<CovidPatient>>(stateStore, nhsNumber));
+
+app.MapPut(ApiEndpoints.SubmitCovidSampleStart, async (string nhsNumber) => {
+    var aRequest = await dClient.GetStateAsync<ActionRequest<CovidPatient>>(stateStore, nhsNumber);
+    aRequest = aRequest with { StartedAt = DateTime.Now, started = true};
+    var command = aRequest?.data as TestCovidPatientCommand ?? throw new InvalidOperationException($"Unable to find data for {aRequest?.id}");
+    await dClient.PublishEventAsync<TestCovidPatientCommand>(pubsub, "testForCovid", command);
+});
 
 app.Run();
 
