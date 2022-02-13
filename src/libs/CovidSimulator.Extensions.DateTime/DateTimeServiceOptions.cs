@@ -1,7 +1,7 @@
-namespace CovidSimulator.Extensions.DateTime;
+namespace CovidSimulator.Extensions.DateTimeService;
 
 public class DateTimeServiceOptions
 {
-    public DateOnly StartingDateForService { get; init; }
+    public DateTime StartingDateForService { get; init; }
     public int HitCountToIncrementDate { get; init; }
 }

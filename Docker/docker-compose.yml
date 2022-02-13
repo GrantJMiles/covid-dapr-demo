@@ -16,7 +16,7 @@ services:
     networks:
       - hello-dapr
   ##########################
-  ##  CONSUMING  SIDECAR  ##
+  ##  GOV ADVICE SIDECAR  ##
   ##########################
   govadviceapi-dapr:
     image: daprio/daprd:latest
@@ -30,6 +30,7 @@ services:
         - "./../my-components/:/components" # Mount our components folder for the runtime to use
     depends_on:
       - govadviceapi
+      - zipkinobserv
     network_mode: service:govadviceapi
   ##########################
   ##      NAMES API       ##
@@ -47,7 +48,7 @@ services:
       - hello-dapr
   
   ##########################
-  ##  PUBLISHING SIDECAR  ##
+  ##    NAMES  SIDECAR    ##
   ##########################
   namesapi-dapr:
     image: daprio/daprd:latest
@@ -61,7 +62,45 @@ services:
         - "./../my-components/:/components" # Mount our components folder for the runtime to use
     depends_on:
       - namesapi
+      - zipkinobserv
     network_mode: service:namesapi
+  ##########################
+  ##    COVID LAB API     ##
+  ##########################
+  covidlabapi:
+    build: 
+      context: ./..
+      dockerfile: src/CovidTestingLabApi/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports: 
+      - 8889:80
+    depends_on:
+      - mydaprtestredis
+      - placement
+      - rabbitmq
+      - eventstoredb
+    networks:
+      - hello-dapr
+  
+  ##########################
+  ##  COVID LAB SIDECAR   ##
+  ##########################
+  covidlabapi-dapr:
+    image: daprio/daprd:latest
+    command: ["./daprd", 
+      "-app-id", "covidlabapi", 
+      "-app-port", "80", 
+      "-components-path", "/components", 
+      "-placement-host-address", "placement:50010",
+      "--config", "/components/observ.yaml" ]
+    volumes:
+        - "./../my-components/:/components" # Mount our components folder for the runtime to use
+    depends_on:
+      - covidlabapi
+      - rabbitmq
+      - zipkinobserv
+    network_mode: service:covidlabapi
   ##########################
   ##      REDIS CACHE     ##
   ##########################
@@ -96,23 +135,24 @@ services:
   ##  RABBIT MQ W/ MANAGEMENT ##
   ##############################
   rabbitmq:
-    image: rabbitmq:3-managment
+    image: rabbitmq:3-management
     ports:
       - 8089:15672
-    depends_on:
+      - 5672:5672
+    networks:
       - hello-dapr
   ############################
   ##       SQL SERVER       ##
   ############################
-  sqlserver:
-    image: "mcr.microsoft.com/mssql/server"
-    environment:
-      - SA_PASSWORD: "Hell0W0rld!"
-      - ACCEPT_EULA: "Y"
+  # sqlserver:
+  #   image: "mcr.microsoft.com/mssql/server"
+  #   environment:
+  #     - SA_PASSWORD="Hell0W0rld!"
+  #     - ACCEPT_EULA="Y"
   ############################
   ##       EVENT STORE      ##
   ############################
-  eventstore.db:
+  eventstoredb:
     image: eventstore/eventstore:20.10.2-buster-slim
     environment:
       - EVENTSTORE_CLUSTER_SIZE=1
@@ -133,39 +173,41 @@ services:
       - type: volume
         source: eventstore-volume-logs
         target: /var/log/eventstore
+    networks:
+      - hello-dapr
   ############################
   ##    ELASTIC SEARCH      ##
   ############################
-  elasticsearch:
-    container_name: es-container
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
-    environment:
-      - xpack.security.enabled=false
-      - "discovery.type=single-node"
-    networks:
-      - hello-dapr
-      - es-net
-    ports:
-      - 9200:9200
+  # elasticsearch:
+  #   container_name: es-container
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+  #   environment:
+  #     - xpack.security.enabled=false
+  #     - "discovery.type=single-node"
+  #   networks:
+  #     - hello-dapr
+  #     - es-net
+  #   ports:
+  #     - 9200:9200
   ############################
   ##        KIBANA          ##
   ############################
-  kibana:
-    container_name: kb-container
-    image: docker.elastic.co/kibana/kibana:7.11.0
-    environment:
-      - ELASTICSEARCH_HOSTS=http://es-container:9200
-    networks:
-      - hello-dapr
-      - es-net
-    depends_on:
-      - elasticsearch
-    ports:
-      - 5601:5601 
+  # kibana:
+  #   container_name: kb-container
+  #   image: docker.elastic.co/kibana/kibana:7.11.0
+  #   environment:
+  #     - ELASTICSEARCH_HOSTS=http://es-container:9200
+  #   networks:
+  #     - hello-dapr
+  #     - es-net
+  #   depends_on:
+  #     - elasticsearch
+  #   ports:
+  #     - 5601:5601 
 networks:
   hello-dapr:
-  es-net:
-    driver: bridge
+  # es-net:
+  #   driver: bridge
 volumes:
   eventstore-volume-data:
   eventstore-volume-logs:

@@ -1,0 +1,10 @@
+apiVersion: dapr.io/v1alpha1
+kind: Subscription
+metadata:
+  name: rabbitmq-pubsub
+spec:
+  topic: testForCovid
+  route: sub/covid-lab/process-sample
+  pubsubname: rabbitmq-pubsub
+scopes:
+- covidlabapi

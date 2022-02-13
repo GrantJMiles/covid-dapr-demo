@@ -1,6 +1,6 @@
 namespace CovidSimulator.Extensions.Data;//{}
 
-public record CovidPatient(string Name, string NhsNumber, bool vaccinated);
+public record CovidPatient(string Name, string NhsNumber, int numberOfVaccinations);
 
 public record GovernmentAdvice(int CurrentDaysInIsolation, int TotalNumberOfAvailableVaccinations, LockdownLevel LockdownLevel);
 

@@ -1,4 +1,4 @@
-namespace CovidSimulator.Extensions.DateTime; //{}
+namespace CovidSimulator.Extensions.DateTimeService; //{}
 
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

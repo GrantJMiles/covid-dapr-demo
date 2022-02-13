@@ -24,4 +24,4 @@ app.MapGet("/getnames", (int count) => {
 
 app.Run();
 
-CovidPatient GetCovidPatient() => new CovidPatient(Faker.Name.FullName(Faker.NameFormats.Standard), Faker.Identification.UkNhsNumber(), random.NextDouble() < 0.5 );
+CovidPatient GetCovidPatient() => new CovidPatient(Faker.Name.FullName(Faker.NameFormats.Standard), Faker.Identification.UkNhsNumber(), random.Next(1,3) );
