@@ -36,6 +36,7 @@ var logger = app.Services.GetService<ILogger<Program>>() ?? throw new InvalidOpe
 var covidService = app.Services.GetService<ICovidResultService>() ?? throw new InvalidOperationException("cannot resolve covid service");
 
 var stateStore = app.Configuration.GetValue<string>("Dapr:StateStore");
+var nhsdb = app.Configuration.GetValue<string>("Dapr:NhsStore");
 var pubsub = app.Configuration.GetValue<string>("Dapr:PubSub");
 logger.LogInformation($"Getting StateStore name: {stateStore}");
 
@@ -65,9 +66,15 @@ app.MapPost(ApiEndpoints.CovidSampleConsumer, async (TestCovidPatientCommand pat
     if (patientToProcess == default) throw new ArgumentException(nameof(patientToProcess));
     logger.LogInformation("patientToProcess: {patient}", patientToProcess);
     logger.LogInformation("Starting to process lab results for {nhsNumber}", patientToProcess.NhsNumber);
+    // REGISTER PATIENT
+    logger.LogInformation("Registering patient for {nhsNumber}", patientToProcess.NhsNumber);
+    await dClient.SaveStateAsync(nhsdb, patientToProcess.NhsNumber, new CovidPatient(patientToProcess.Name, patientToProcess.NhsNumber, patientToProcess.numberOfVaccinations));
+    // GET GOVERNMENT ADVICE
     var request = dClient.CreateInvokeMethodRequest(HttpMethod.Get, "govadviceapi", "api/gov/advice");
     var latestGovAdvice = await dClient.InvokeMethodAsync<GovernmentAdvice>(request);
+    // GET COVID RESULTS
     var covidResults = covidService.GetSampleResult(patient: patientToProcess, latestAdvice: latestGovAdvice);
+    // SEND RESULTS TO EVENT STORE
     var evt = new EventData(
         eventId: Uuid.NewUuid(),
         type: "covid-result",
@@ -82,6 +89,7 @@ app.MapPost(ApiEndpoints.CovidSampleConsumer, async (TestCovidPatientCommand pat
     logger.LogInformation("Event Store Result pos {eventCommitPosition}", result.LogPosition.CommitPosition);
     if (covidResults.HasCovid)
     {
+        logger.LogInformation("logging a positive covid result for {nhsNumber}", covidResults.NhsNumber);
         await dClient.PublishEventAsync<CovidSampleResult>(pubsub, "positive-result", covidResults);
     }
 });

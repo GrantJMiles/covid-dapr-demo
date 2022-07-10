@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="dapr.aspnetcore" Version="1.6.0" />
+    <PackageReference Include="dapr.client" Version="1.6.0" />
+    <PackageReference Include="EventStore.Client" Version="21.2.2" />
+    <PackageReference Include="EventStore.Client.Grpc.Streams" Version="21.2.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\libs\CovidSimulator.Extensions.Data.Abstractions\CovidSimulator.Extensions.Data.Abstractions.csproj" />
+    <ProjectReference Include="..\libs\CovidSimulator.Extensions.DateTime\CovidSimulator.Extensions.DateTime.csproj" />
+  </ItemGroup>
+</Project>

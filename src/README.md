@@ -1,9 +1,9 @@
 # Covid Test & Trace Simualtor
 How does it all hang together?
 1. Service Worker to simulate test and trace centre
-1. Covid Testing Lab API (where T&TC or Home Testing kits are sent)
+1. Covid Testing Lab API (where T&TC or Home Testing kits are sent) [x]
     - Promise API to add the request to send
-1. Covid Testing Lab Consumer
+1. Covid Testing Lab Consumer [x]
     - Runs the simulation covid test
     - Publishes any events
 1. Names API (to simulate the NHS DB for people) [X]
